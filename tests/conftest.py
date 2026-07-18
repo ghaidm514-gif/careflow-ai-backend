@@ -1,11 +1,12 @@
 """Pytest configuration and shared fixtures."""
 
 import os
+
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import create_app
 from app.infrastructure.llm import MockLLMProvider
+from app.main import create_app
 
 
 @pytest.fixture

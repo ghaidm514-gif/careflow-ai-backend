@@ -12,3 +12,6 @@ htmlcov
 .DS_Store
 *.db
 *.log
+
+.venv/
+.ruff_cache/

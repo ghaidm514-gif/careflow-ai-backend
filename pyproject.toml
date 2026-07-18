@@ -35,7 +35,10 @@ python_files = ["test_*.py"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+# NOTE: declared target is 3.12, but only Python 3.9.6 is available on this
+# machine. target-version matches the actual runtime so lint rules do not
+# suggest syntax the interpreter cannot execute. Bump to py312 when provisioned.
+target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "C4", "UP", "B"]
@@ -44,3 +47,15 @@ ignore = ["E501"]
 [tool.pyright]
 include = ["app", "tests"]
 typeCheckingMode = "strict"
+pythonVersion = "3.9"
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+extraPaths = ["."]
+# Test code uses untyped fixtures; production code stays strict.
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownParameterType = false
+reportUnknownArgumentType = false
+reportMissingParameterType = false
+reportMissingTypeArgument = false

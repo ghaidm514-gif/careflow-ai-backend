@@ -5,12 +5,14 @@ from enum import Enum
 
 class Language(str, Enum):
     """Supported languages."""
+
     ENGLISH = "en"
     ARABIC = "ar"
 
 
 class RequestStatus(str, Enum):
     """Service request lifecycle states."""
+
     PENDING = "pending"
     INTAKE_COMPLETE = "intake_complete"
     IN_TRIAGE = "in_triage"
@@ -24,6 +26,7 @@ class RequestStatus(str, Enum):
 
 class RequestClassification(str, Enum):
     """Request classification outcomes."""
+
     ADMINISTRATIVE = "administrative"
     HEALTHCARE = "healthcare"
     UNCLEAR = "unclear"
@@ -31,6 +34,7 @@ class RequestClassification(str, Enum):
 
 class UrgencyLevel(str, Enum):
     """Triage urgency levels."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -39,6 +43,7 @@ class UrgencyLevel(str, Enum):
 
 class RecommendedService(str, Enum):
     """Recommended healthcare services."""
+
     ADMINISTRATIVE_SERVICE = "administrative_service"
     VIRTUAL_CONSULTATION = "virtual_consultation"
     PRIMARY_CARE = "primary_care"
@@ -49,6 +54,7 @@ class RecommendedService(str, Enum):
 
 class SafetyFlagSeverity(str, Enum):
     """Safety flag severity levels."""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -56,6 +62,7 @@ class SafetyFlagSeverity(str, Enum):
 
 class SafetyRuleCategory(str, Enum):
     """Safety rule category for future management."""
+
     EMERGENCY = "emergency"
     URGENT = "urgent"
     QUALITY = "quality"
@@ -64,6 +71,7 @@ class SafetyRuleCategory(str, Enum):
 
 class StaffDecisionType(str, Enum):
     """Staff decision types."""
+
     ACCEPT = "accept"
     MODIFY = "modify"
     ESCALATE = "escalate"
@@ -73,6 +81,7 @@ class StaffDecisionType(str, Enum):
 
 class StaffRole(str, Enum):
     """Staff member roles."""
+
     TRIAGE_NURSE = "triage_nurse"
     ADMINISTRATOR = "administrator"
     SUPERVISOR = "supervisor"
@@ -80,6 +89,7 @@ class StaffRole(str, Enum):
 
 class Permission(str, Enum):
     """Fine-grained permissions for RBAC."""
+
     VIEW_REQUEST = "view_request"
     ANSWER_TRIAGE = "answer_triage"
     ACCEPT_RECOMMENDATION = "accept_recommendation"

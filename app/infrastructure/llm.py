@@ -1,7 +1,7 @@
 """LLM provider implementations."""
 
-from typing import Dict, Any, List
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class MockLLMProvider:
         self,
         user_input: str,
         language: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Mock intake classification."""
         self.call_count += 1
         lower_input = user_input.lower()
@@ -48,10 +48,10 @@ class MockLLMProvider:
     async def generate_triage_question(
         self,
         request_id: str,
-        conversation_history: List[LLMMessage],
+        conversation_history: list[LLMMessage],
         language: str,
-        collected_answers: Dict[str, str],
-    ) -> Dict[str, Any]:
+        collected_answers: dict[str, str],
+    ) -> dict[str, Any]:
         """Mock triage question generation."""
         self.call_count += 1
         num_answers = len(collected_answers)
@@ -88,11 +88,11 @@ class MockLLMProvider:
         self,
         request_id: str,
         classification: str,
-        conversation_history: List[LLMMessage],
-        triage_answers: Dict[str, str],
+        conversation_history: list[LLMMessage],
+        triage_answers: dict[str, str],
         urgency_estimate: str,
         language: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Mock recommendation generation."""
         self.call_count += 1
 

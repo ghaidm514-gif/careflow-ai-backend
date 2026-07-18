@@ -1,7 +1,7 @@
 """Structured logging with trace IDs."""
 
-import logging
 import json
+import logging
 from contextvars import ContextVar
 
 trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
@@ -31,10 +31,10 @@ class StructuredJSONFormatter(logging.Formatter):
 def setup_logging(level: str = "INFO") -> None:
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
-    
+
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(StructuredJSONFormatter())
     root_logger.addHandler(console_handler)
