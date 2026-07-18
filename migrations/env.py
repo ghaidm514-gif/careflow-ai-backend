@@ -14,10 +14,12 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # CAREFLOW_DATABASE_URL takes precedence over the alembic.ini fallback.
-# Async driver suffixes are stripped: alembic runs synchronously.
+# Alembic runs synchronously: the app's asyncpg driver is swapped for psycopg.
 env_url = os.environ.get("CAREFLOW_DATABASE_URL")
 if env_url:
     env_url = env_url.replace("postgresql+asyncpg://", "postgresql://")
+    if env_url.startswith("postgresql://"):
+        env_url = env_url.replace("postgresql://", "postgresql+psycopg://", 1)
     config.set_main_option("sqlalchemy.url", env_url)
 
 target_metadata = Base.metadata
@@ -49,6 +51,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            render_as_batch=True,
         )
         with context.begin_transaction():
             context.run_migrations()

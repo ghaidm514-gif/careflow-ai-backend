@@ -1,9 +1,10 @@
 iniconfig==2.1.0
 nodeenv==1.10.0
 packaging==26.2
+pgserver==0.1.4
 pluggy==1.6.0
 pyright==1.1.411
-pytest==8.4.2
 pytest-asyncio==1.2.0
+pytest==8.4.2
 ruff==0.15.22
 tomli==2.4.1

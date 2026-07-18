@@ -38,6 +38,18 @@ python3 -m venv .venv
 - `api/` — HTTP routes and endpoints
 - `core/` — Utilities (RBAC, configuration)
 
+## Database Drivers
+
+PostgreSQL (Supabase) is the production target. Two pinned drivers serve two
+execution contexts from one plain `postgresql://` URL:
+
+- **asyncpg** — the async application engine (`postgresql+asyncpg://`, converted
+  automatically in `app/infrastructure/database.py`)
+- **psycopg v3** — synchronous Alembic migrations (`postgresql+psycopg://`,
+  converted automatically in `migrations/env.py`)
+
+SQLite is supported for isolated local verification only.
+
 ## Health Checks
 
 ```bash

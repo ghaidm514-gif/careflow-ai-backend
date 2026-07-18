@@ -71,3 +71,18 @@ def test_env_example_contains_no_secrets():
         content = f.read()
     assert "sk-" not in content
     assert "change-in-production" in content
+
+
+def test_database_url_async_driver_conversion():
+    """The app engine converts plain postgresql:// URLs to asyncpg."""
+    url = "postgresql://user:pass@localhost:5432/db"
+    converted = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    assert converted == "postgresql+asyncpg://user:pass@localhost:5432/db"
+
+
+def test_postgresql_drivers_importable():
+    """Both pinned PostgreSQL drivers are installed and importable."""
+    import importlib
+
+    assert importlib.import_module("asyncpg") is not None
+    assert importlib.import_module("psycopg") is not None

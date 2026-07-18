@@ -92,18 +92,27 @@ class ISafetyFlagRepository(ABC):
 
 
 class IAIRecommendationRepository(ABC):
-    """AI recommendation repository (one per request; NO delete)."""
+    """AI recommendation repository (append-only; NO update/delete).
+
+    Regeneration adds a new row with the next sequence_number; prior rows are
+    preserved for audit.
+    """
 
     @abstractmethod
-    async def create(self, rec: AIRecommendation) -> AIRecommendation:
+    async def add(self, rec: AIRecommendation) -> AIRecommendation:
         pass
 
     @abstractmethod
-    async def get_by_request_id(self, request_id: UUID) -> Optional[AIRecommendation]:
+    async def get(self, recommendation_id: UUID) -> Optional[AIRecommendation]:
         pass
 
     @abstractmethod
-    async def update(self, rec: AIRecommendation) -> AIRecommendation:
+    async def list_for_request(self, request_id: UUID) -> list[AIRecommendation]:
+        pass
+
+    @abstractmethod
+    async def get_latest_for_request(self, request_id: UUID) -> Optional[AIRecommendation]:
+        """Highest sequence_number for the request (deterministic)."""
         pass
 
 

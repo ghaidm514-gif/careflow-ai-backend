@@ -97,3 +97,89 @@ def test_ai_recommendations_request_unique(alembic_config):
         assert any(row[2] == 1 for row in indexes)
     finally:
         conn.close()
+
+
+def _seed_request(conn, request_id="11111111111111111111111111111111"):
+    """Insert a session and request so recommendations can reference them."""
+    session_id = "00000000000000000000000000000000"
+    conn.execute(
+        "INSERT INTO user_sessions (session_id, language, is_authenticated, created_at) "
+        "VALUES (?, 'en', 0, '2026-07-18T00:00:00+00:00')",
+        (session_id,),
+    )
+    conn.execute(
+        "INSERT INTO service_requests (request_id, session_id, initial_description, "
+        "language, status, created_at, updated_at) "
+        "VALUES (?, ?, 'demo', 'en', 'pending', "
+        "'2026-07-18T00:00:00+00:00', '2026-07-18T00:00:00+00:00')",
+        (request_id, session_id),
+    )
+    return request_id
+
+
+def _insert_recommendation(conn, request_id, rec_id, seq, service="primary_care"):
+    conn.execute(
+        "INSERT INTO ai_recommendations (recommendation_id, request_id, sequence_number, "
+        "recommended_service, urgency_level, rationale, confidence, confidence_reason, "
+        "model_provider, model_name, prompt_version, workflow_version, schema_version, "
+        "generated_at) VALUES (?, ?, ?, ?, 'medium', 'demo rationale', 0.8, 'demo reason', "
+        "'anthropic', 'claude-3-5-sonnet-20241022', '1.0.0', '1.0.0', '1.0.0', "
+        "'2026-07-18T00:00:00+00:00')",
+        (rec_id, request_id, seq, service),
+    )
+
+
+def test_multiple_recommendations_per_request(alembic_config):
+    """Two recommendation rows can exist for one request (append-only regeneration)."""
+    config, db_path = alembic_config
+    command.upgrade(config, "head")
+    conn = sqlite3.connect(db_path)
+    try:
+        request_id = _seed_request(conn)
+        _insert_recommendation(conn, request_id, "a" * 32, 1)
+        _insert_recommendation(conn, request_id, "b" * 32, 2, service="urgent_care")
+        conn.commit()
+        count = conn.execute(
+            "SELECT COUNT(*) FROM ai_recommendations WHERE request_id = ?", (request_id,)
+        ).fetchone()[0]
+        assert count == 2
+    finally:
+        conn.close()
+
+
+def test_duplicate_sequence_number_rejected(alembic_config):
+    """(request_id, sequence_number) is unique — duplicates fail."""
+    config, db_path = alembic_config
+    command.upgrade(config, "head")
+    conn = sqlite3.connect(db_path)
+    try:
+        request_id = _seed_request(conn)
+        _insert_recommendation(conn, request_id, "a" * 32, 1)
+        conn.commit()
+        with pytest.raises(sqlite3.IntegrityError):
+            _insert_recommendation(conn, request_id, "b" * 32, 1)
+    finally:
+        conn.close()
+
+
+def test_latest_recommendation_selection_deterministic(alembic_config):
+    """Highest sequence_number wins, independent of insertion order."""
+    config, db_path = alembic_config
+    command.upgrade(config, "head")
+    conn = sqlite3.connect(db_path)
+    try:
+        request_id = _seed_request(conn)
+        # Insert out of order: seq 3, then 1, then 2
+        _insert_recommendation(conn, request_id, "c" * 32, 3, service="urgent_care")
+        _insert_recommendation(conn, request_id, "a" * 32, 1)
+        _insert_recommendation(conn, request_id, "b" * 32, 2)
+        conn.commit()
+        row = conn.execute(
+            "SELECT recommendation_id, recommended_service FROM ai_recommendations "
+            "WHERE request_id = ? ORDER BY sequence_number DESC LIMIT 1",
+            (request_id,),
+        ).fetchone()
+        assert row[0] == "c" * 32
+        assert row[1] == "urgent_care"
+    finally:
+        conn.close()

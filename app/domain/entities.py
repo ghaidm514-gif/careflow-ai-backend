@@ -86,9 +86,13 @@ class SafetyFlag:
     triggered_at: datetime = field(default_factory=utc_now)
 
 
-@dataclass
+@dataclass(frozen=True)
 class AIRecommendation:
-    """Mutable recommendation (can be regenerated; versioned)."""
+    """Immutable recommendation (append-only; regeneration creates a new row).
+
+    sequence_number orders regenerations for a request; the highest number is
+    the current recommendation. Prior rows remain for audit.
+    """
 
     recommendation_id: UUID
     request_id: UUID
@@ -97,6 +101,7 @@ class AIRecommendation:
     rationale: str
     confidence: float
     confidence_reason: str
+    sequence_number: int = 1
     rule_triggered: Optional[str] = None
     model_provider: str = "anthropic"
     model_name: str = "claude-3-5-sonnet-20241022"

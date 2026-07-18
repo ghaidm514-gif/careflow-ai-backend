@@ -121,6 +121,37 @@ def test_staff_user_is_frozen():
         user.email = "other@example.com"  # pyright: ignore[reportAttributeAccessIssue]
 
 
+def test_ai_recommendation_is_frozen():
+    """AIRecommendation is append-only — mutation is rejected."""
+    rec = AIRecommendation(
+        recommendation_id=uuid4(),
+        request_id=uuid4(),
+        recommended_service=RecommendedService.PRIMARY_CARE,
+        urgency_level=UrgencyLevel.MEDIUM,
+        rationale="Initial",
+        confidence=0.8,
+        confidence_reason="Initial reason",
+    )
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        rec.confidence = 0.99  # pyright: ignore[reportAttributeAccessIssue]
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        rec.sequence_number = 2  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_ai_recommendation_default_sequence_number():
+    """New recommendations default to sequence_number 1."""
+    rec = AIRecommendation(
+        recommendation_id=uuid4(),
+        request_id=uuid4(),
+        recommended_service=RecommendedService.PRIMARY_CARE,
+        urgency_level=UrgencyLevel.MEDIUM,
+        rationale="Initial",
+        confidence=0.8,
+        confidence_reason="Initial reason",
+    )
+    assert rec.sequence_number == 1
+
+
 def test_ai_recommendation_versioning_fields():
     """AIRecommendation carries full versioning metadata."""
     rec = AIRecommendation(

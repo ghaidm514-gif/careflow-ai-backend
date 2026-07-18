@@ -206,7 +206,7 @@ class SafetyFlagModel(Base):
 
 
 class AIRecommendationModel(Base):
-    """One recommendation per request; versioned for audit."""
+    """Append-only: regeneration inserts a new row with the next sequence_number."""
 
     __tablename__ = "ai_recommendations"
 
@@ -215,8 +215,8 @@ class AIRecommendationModel(Base):
         Uuid,
         ForeignKey("service_requests.request_id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,
     )
+    sequence_number: Mapped[int] = mapped_column(nullable=False, default=1)
     recommended_service: Mapped[RecommendedService] = mapped_column(
         enum_column(RecommendedService, "rec_recommended_service"), nullable=False
     )
@@ -240,6 +240,10 @@ class AIRecommendationModel(Base):
         CheckConstraint(
             "confidence >= 0.0 AND confidence <= 1.0", name="ck_recommendations_confidence"
         ),
+        UniqueConstraint(
+            "request_id", "sequence_number", name="uq_ai_recommendations_request_sequence"
+        ),
+        Index("ix_ai_recommendations_request_id", "request_id"),
         Index("ix_ai_recommendations_generated_at", "generated_at"),
     )
 
@@ -320,6 +324,7 @@ class AuditLogModel(Base):
 
 
 APPEND_ONLY_TABLES = (
+    "ai_recommendations",
     "conversation_messages",
     "triage_answers",
     "safety_flags",
