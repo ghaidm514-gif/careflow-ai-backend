@@ -14,3 +14,4 @@ pytest-asyncio==1.2.0
 pytest==8.4.2
 ruff==0.15.22
 tomli==2.4.1
+aiosqlite==0.22.1

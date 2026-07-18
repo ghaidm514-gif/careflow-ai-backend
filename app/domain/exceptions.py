@@ -69,3 +69,35 @@ class LLMTimeoutException(CareFlowException):
     code = "LLM_TIMEOUT"
     http_status = 504
     message = "The system timed out while processing your request."
+
+
+class DependencyUnavailableException(CareFlowException):
+    """503: Database or other critical dependency unavailable."""
+
+    code = "SERVICE_UNAVAILABLE"
+    http_status = 503
+    message = "The service is temporarily unavailable. Please try again shortly."
+
+
+class AuthenticationFailedException(CareFlowException):
+    """401: Invalid or expired authentication."""
+
+    code = "AUTHENTICATION_FAILED"
+    http_status = 401
+    message = "Authentication failed. Please log in again."
+
+
+class PermissionDeniedException(CareFlowException):
+    """403: Insufficient permissions."""
+
+    code = "PERMISSION_DENIED"
+    http_status = 403
+    message = "You do not have permission to perform this action."
+
+
+class ResourceNotFoundException(CareFlowException):
+    """404: Resource not found."""
+
+    code = "RESOURCE_NOT_FOUND"
+    http_status = 404
+    message = "The requested resource was not found."

@@ -201,3 +201,68 @@ def test_deleting_session_cannot_remove_requests(pg_uri, seeded):
                 (seeded["session"],),
             )
             assert _one(cur)[0] == 1
+
+
+async def test_repository_adapters_on_postgresql_via_asyncpg(pg_uri):
+    """The SQLAlchemy adapters work end-to-end on PostgreSQL through asyncpg —
+    the production driver path (create → flush → query → map to entities)."""
+    from uuid import uuid4
+
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from app.domain.entities import AIRecommendation, ServiceRequest, UserSession
+    from app.domain.enums import (
+        Language,
+        RecommendedService,
+        RequestStatus,
+        UrgencyLevel,
+    )
+    from app.infrastructure.repositories import (
+        SQLAlchemyAIRecommendationRepository,
+        SQLAlchemyServiceRequestRepository,
+        SQLAlchemyUserSessionRepository,
+    )
+
+    async_url = pg_uri.replace("postgresql://", "postgresql+asyncpg://", 1)
+    engine = create_async_engine(async_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        async with factory() as session:
+            user_session = await SQLAlchemyUserSessionRepository(session).create(
+                UserSession(session_id=uuid4(), language=Language.ARABIC)
+            )
+            request = await SQLAlchemyServiceRequestRepository(session).create(
+                ServiceRequest(
+                    request_id=uuid4(),
+                    session_id=user_session.session_id,
+                    initial_description="أريد إعادة جدولة موعدي",
+                    language=Language.ARABIC,
+                    status=RequestStatus.PENDING,
+                )
+            )
+            rec_repo = SQLAlchemyAIRecommendationRepository(session)
+            for seq in (1, 2):
+                await rec_repo.add(
+                    AIRecommendation(
+                        recommendation_id=uuid4(),
+                        request_id=request.request_id,
+                        recommended_service=RecommendedService.ADMINISTRATIVE_SERVICE,
+                        urgency_level=UrgencyLevel.LOW,
+                        rationale=f"rev {seq}",
+                        confidence=0.9,
+                        confidence_reason="clear administrative request",
+                        sequence_number=seq,
+                    )
+                )
+            latest = await rec_repo.get_latest_for_request(request.request_id)
+            assert latest is not None
+            assert latest.sequence_number == 2
+            assert latest.generated_at.tzinfo is not None  # timestamptz round-trip
+            fetched = await SQLAlchemyServiceRequestRepository(session).get_by_id(
+                request.request_id
+            )
+            assert fetched is not None
+            assert fetched.initial_description == "أريد إعادة جدولة موعدي"  # UTF-8 Arabic
+            await session.commit()
+    finally:
+        await engine.dispose()
