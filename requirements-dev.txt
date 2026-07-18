@@ -1,3 +1,9 @@
+# Development-only pins. Install together with runtime requirements:
+#   pip install -r requirements-dev.txt   (pulls in requirements.txt below)
+# Strategy: exact pins from the verified environment (pip freeze). pgserver
+# is a DEV-ONLY embedded PostgreSQL for isolated migration/trigger tests —
+# it must never appear in requirements.txt or production images.
+-r requirements.txt
 iniconfig==2.1.0
 nodeenv==1.10.0
 packaging==26.2

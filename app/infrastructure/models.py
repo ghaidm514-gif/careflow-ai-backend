@@ -10,9 +10,22 @@ Type portability:
   stay portable and enum-value changes do not require ALTER TYPE.
 - JSON: plain JSON with a JSONB variant on PostgreSQL.
 Append-only tables (conversation_messages, triage_answers, safety_flags,
-staff_decisions, audit_logs) are additionally protected by PostgreSQL triggers
-added in the initial migration (dialect-guarded); on other dialects the
-repository-port layer is the enforcement boundary.
+ai_recommendations, staff_decisions, audit_logs) are additionally protected by
+PostgreSQL triggers added in the migrations (dialect-guarded); on other
+dialects the repository-port layer is the enforcement boundary.
+
+Deletion policy (frozen):
+- ServiceRequest is never physically deleted; closing is a status transition.
+- All business-history child FKs use ondelete=RESTRICT so historical records
+  can never disappear through parent deletion (AuditLog in particular).
+- user_sessions.staff_user_id uses SET NULL (nullable actor reference only).
+- No CASCADE remains on any audit or healthcare history relationship.
+
+Answer-correction semantics (frozen for MVP):
+- TriageAnswer is immutable; Phase 3 supports NO answer correction.
+- UNIQUE(request_id, question_id) enforces one answer per question.
+- Transport retries are absorbed by idempotency keys; a different answer to an
+  answered question returns 409 QUESTION_ALREADY_ANSWERED. Revisions deferred.
 """
 
 import uuid
@@ -99,7 +112,7 @@ class ServiceRequestModel(Base):
 
     request_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user_sessions.session_id", ondelete="CASCADE"), nullable=False
+        Uuid, ForeignKey("user_sessions.session_id", ondelete="RESTRICT"), nullable=False
     )
     initial_description: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[Language] = mapped_column(
@@ -141,7 +154,7 @@ class ConversationMessageModel(Base):
 
     message_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     request_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("service_requests.request_id", ondelete="CASCADE"), nullable=False
+        Uuid, ForeignKey("service_requests.request_id", ondelete="RESTRICT"), nullable=False
     )
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
@@ -164,7 +177,7 @@ class TriageAnswerModel(Base):
 
     answer_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     request_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("service_requests.request_id", ondelete="CASCADE"), nullable=False
+        Uuid, ForeignKey("service_requests.request_id", ondelete="RESTRICT"), nullable=False
     )
     question_id: Mapped[str] = mapped_column(String(100), nullable=False)
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -186,7 +199,7 @@ class SafetyFlagModel(Base):
 
     flag_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     request_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("service_requests.request_id", ondelete="CASCADE"), nullable=False
+        Uuid, ForeignKey("service_requests.request_id", ondelete="RESTRICT"), nullable=False
     )
     rule_code: Mapped[str] = mapped_column(String(100), nullable=False)
     severity: Mapped[SafetyFlagSeverity] = mapped_column(
@@ -213,7 +226,7 @@ class AIRecommendationModel(Base):
     recommendation_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     request_id: Mapped[uuid.UUID] = mapped_column(
         Uuid,
-        ForeignKey("service_requests.request_id", ondelete="CASCADE"),
+        ForeignKey("service_requests.request_id", ondelete="RESTRICT"),
         nullable=False,
     )
     sequence_number: Mapped[int] = mapped_column(nullable=False, default=1)
@@ -268,7 +281,7 @@ class StaffDecisionModel(Base):
 
     decision_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     request_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("service_requests.request_id", ondelete="CASCADE"), nullable=False
+        Uuid, ForeignKey("service_requests.request_id", ondelete="RESTRICT"), nullable=False
     )
     staff_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("staff_users.staff_user_id", ondelete="RESTRICT"), nullable=False
@@ -302,7 +315,7 @@ class AuditLogModel(Base):
 
     log_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     request_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("service_requests.request_id", ondelete="CASCADE"), nullable=False
+        Uuid, ForeignKey("service_requests.request_id", ondelete="RESTRICT"), nullable=False
     )
     actor: Mapped[str] = mapped_column(String(100), nullable=False)
     action: Mapped[str] = mapped_column(String(100), nullable=False)

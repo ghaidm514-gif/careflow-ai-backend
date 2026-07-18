@@ -62,7 +62,14 @@ class IConversationMessageRepository(ABC):
 
 
 class ITriageAnswerRepository(ABC):
-    """Triage answer repository (append-only; NO update/delete)."""
+    """Triage answer repository (append-only; NO update/delete).
+
+    FROZEN MVP SEMANTICS: TriageAnswer is immutable and answer correction is
+    NOT supported in Phase 3. One answer per (request_id, question_id) is
+    enforced by a database unique constraint. Transport retries are absorbed
+    by idempotency keys; a different answer to an already answered question
+    must surface 409 QUESTION_ALREADY_ANSWERED. Revisions are deferred.
+    """
 
     @abstractmethod
     async def create(self, answer: TriageAnswer) -> TriageAnswer:

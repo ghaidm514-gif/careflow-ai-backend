@@ -183,3 +183,30 @@ def test_latest_recommendation_selection_deterministic(alembic_config):
         assert row[1] == "urgent_care"
     finally:
         conn.close()
+
+
+def test_second_answer_to_same_question_rejected(alembic_config):
+    """FROZEN MVP semantics: no answer correction — a second answer to the
+    same (request_id, question_id) violates the unique constraint (the API
+    layer will surface this as 409 QUESTION_ALREADY_ANSWERED)."""
+    config, db_path = alembic_config
+    command.upgrade(config, "head")
+    conn = sqlite3.connect(db_path)
+    try:
+        request_id = _seed_request(conn)
+        conn.execute(
+            "INSERT INTO triage_answers (answer_id, request_id, question_id, question_text, "
+            "user_answer, processed_at) VALUES (?, ?, 'q1', 'Q?', 'first answer', "
+            "'2026-07-18T00:00:00+00:00')",
+            ("a" * 32, request_id),
+        )
+        conn.commit()
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO triage_answers (answer_id, request_id, question_id, "
+                "question_text, user_answer, processed_at) VALUES (?, ?, 'q1', 'Q?', "
+                "'different answer', '2026-07-18T00:00:00+00:00')",
+                ("b" * 32, request_id),
+            )
+    finally:
+        conn.close()

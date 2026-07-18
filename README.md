@@ -6,6 +6,15 @@ Bilingual healthcare navigation and initial triage assistant.
 
 Infrastructure scaffolding with clean architecture.
 
+## Python Version
+
+- **Declared target:** Python 3.12 (pyproject.toml).
+- **Currently verified local environment:** Python 3.9.6 — the only interpreter
+  available on this machine. All quality gates and tests execute on 3.9.6; the
+  code uses only 3.9-compatible syntax.
+- **Open requirement:** Python 3.12 verification in CI/deployment remains
+  outstanding (TECH_DEBT.md ENV-001).
+
 ## Quick Start
 
 The verified local workflow is **venv + pip** (Poetry is not installed on this
