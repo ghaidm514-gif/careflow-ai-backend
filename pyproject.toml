@@ -1,6 +1,8 @@
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+# NOTE: This file provides package metadata and tool configuration (ruff, pyright,
+# pytest) only. The verified local install workflow is venv + pip with pinned
+# requirements.txt / requirements-dev.txt — Poetry is NOT installed on this
+# machine and is not the active workflow. The [tool.poetry] section is retained
+# as forward-looking metadata should Poetry be adopted later.
 
 [tool.poetry]
 name = "careflow-ai"

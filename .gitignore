@@ -15,3 +15,5 @@ htmlcov
 
 .venv/
 .ruff_cache/
+.tmp_migration_test.db
+careflow_dev.db

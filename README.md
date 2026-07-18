@@ -8,22 +8,26 @@ Infrastructure scaffolding with clean architecture.
 
 ## Quick Start
 
+The verified local workflow is **venv + pip** (Poetry is not installed on this
+machine; `pyproject.toml` carries package metadata and tool configuration only).
+
 ```bash
-# Install dependencies
-poetry install
+# Create environment and install pinned dependencies
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt -r requirements-dev.txt
 
 # Run tests
-poetry run pytest -v
+.venv/bin/pytest -v
 
 # Lint and format
-poetry run ruff check .
-poetry run ruff format .
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
 
 # Type check
-poetry run pyright
+.venv/bin/pyright
 
 # Start dev server
-poetry run uvicorn app.main:app --reload
+.venv/bin/uvicorn app.main:app --reload
 ```
 
 ## Architecture
