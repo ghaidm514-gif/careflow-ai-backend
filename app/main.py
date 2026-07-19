@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.health import router as health_router
@@ -61,6 +62,15 @@ def create_app() -> FastAPI:
         title="CareFlow AI",
         version="0.1.0",
         lifespan=lifespan,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.app.cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-Trace-ID", "Idempotency-Key", "Authorization"],
+        expose_headers=["X-Trace-ID"],
     )
 
     app.add_exception_handler(CareFlowException, handle_domain_exception)

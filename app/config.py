@@ -12,6 +12,15 @@ class AppConfig(BaseSettings):
     environment: Literal["development", "testing", "staging", "production"] = "development"
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    # Production frontend origin (e.g. https://careflow.lovable.app). Empty = disabled.
+    frontend_origin: str = ""
+
+    @property
+    def cors_origins(self) -> list[str]:
+        origins = ["http://localhost:5173", "http://localhost:3000"]
+        if self.frontend_origin:
+            origins.append(self.frontend_origin)
+        return origins
 
 
 class TriageConfig(BaseSettings):
