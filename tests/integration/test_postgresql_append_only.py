@@ -266,3 +266,115 @@ async def test_repository_adapters_on_postgresql_via_asyncpg(pg_uri):
             await session.commit()
     finally:
         await engine.dispose()
+
+
+async def test_shared_session_single_rollback_removes_both_inserts(pg_uri):
+    """Two different repositories share one AsyncSession on PostgreSQL; one
+    caller rollback removes both inserts, and a separate session never sees
+    the rolled-back data."""
+    from uuid import uuid4
+
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from app.domain.entities import ServiceRequest, UserSession
+    from app.domain.enums import Language, RequestStatus
+    from app.infrastructure.repositories import (
+        SQLAlchemyServiceRequestRepository,
+        SQLAlchemyUserSessionRepository,
+    )
+
+    async_url = pg_uri.replace("postgresql://", "postgresql+asyncpg://", 1)
+    engine = create_async_engine(async_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    session_id, request_id = uuid4(), uuid4()
+    try:
+        async with factory() as shared:
+            session_repo = SQLAlchemyUserSessionRepository(shared)
+            request_repo = SQLAlchemyServiceRequestRepository(shared)
+            await session_repo.create(UserSession(session_id=session_id, language=Language.ENGLISH))
+            await request_repo.create(
+                ServiceRequest(
+                    request_id=request_id,
+                    session_id=session_id,
+                    initial_description="rollback me",
+                    language=Language.ENGLISH,
+                    status=RequestStatus.PENDING,
+                )
+            )
+            # flushed data visible inside the shared transaction
+            assert await session_repo.get_by_id(session_id) is not None
+            assert await request_repo.get_by_id(request_id) is not None
+
+            # a separate concurrent session cannot see the uncommitted rows
+            async with factory() as other:
+                other_sessions = SQLAlchemyUserSessionRepository(other)
+                assert await other_sessions.get_by_id(session_id) is None
+
+            await shared.rollback()  # ONE caller rollback
+
+        # both inserts are gone for any new session
+        async with factory() as fresh:
+            assert await SQLAlchemyUserSessionRepository(fresh).get_by_id(session_id) is None
+            assert await SQLAlchemyServiceRequestRepository(fresh).get_by_id(request_id) is None
+    finally:
+        await engine.dispose()
+
+
+async def test_duplicate_answer_translation_on_postgresql(pg_uri):
+    """The constraint-name extraction path works on PostgreSQL via asyncpg:
+    uq_triage_answers_request_question → QuestionAlreadyAnsweredException,
+    while a foreign-key violation propagates as IntegrityError unchanged."""
+    from uuid import uuid4
+
+    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from app.domain.entities import ServiceRequest, TriageAnswer, UserSession
+    from app.domain.enums import Language, RequestStatus
+    from app.domain.exceptions import QuestionAlreadyAnsweredException
+    from app.infrastructure.repositories import (
+        SQLAlchemyServiceRequestRepository,
+        SQLAlchemyTriageAnswerRepository,
+        SQLAlchemyUserSessionRepository,
+    )
+
+    def _answer(request_id, question_id="q1"):
+        return TriageAnswer(
+            answer_id=uuid4(),
+            request_id=request_id,
+            question_id=question_id,
+            question_text="Q?",
+            user_answer="A",
+        )
+
+    async_url = pg_uri.replace("postgresql://", "postgresql+asyncpg://", 1)
+    engine = create_async_engine(async_url)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        async with factory() as session:
+            parent = await SQLAlchemyUserSessionRepository(session).create(
+                UserSession(session_id=uuid4(), language=Language.ENGLISH)
+            )
+            request = await SQLAlchemyServiceRequestRepository(session).create(
+                ServiceRequest(
+                    request_id=uuid4(),
+                    session_id=parent.session_id,
+                    initial_description="demo",
+                    language=Language.ENGLISH,
+                    status=RequestStatus.IN_TRIAGE,
+                )
+            )
+            repo = SQLAlchemyTriageAnswerRepository(session)
+            await repo.create(_answer(request.request_id))
+            await session.commit()
+
+            with pytest.raises(QuestionAlreadyAnsweredException):
+                await repo.create(_answer(request.request_id))
+            await session.rollback()  # caller owns transaction repair
+
+            with pytest.raises(IntegrityError) as exc_info:
+                await repo.create(_answer(uuid4()))  # FK violation: no request
+            assert not isinstance(exc_info.value, QuestionAlreadyAnsweredException)
+            await session.rollback()
+    finally:
+        await engine.dispose()
