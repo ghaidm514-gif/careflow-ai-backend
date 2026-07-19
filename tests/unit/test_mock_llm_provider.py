@@ -63,7 +63,7 @@ async def test_terminal_status_after_enough_answers():
         request_id="req1",
         conversation_history=[],
         language="en",
-        collected_answers={"q1": "a", "q2": "b", "q3": "c"},
+        collected_answers={"q_main": "a", "q_duration": "b", "q_severity": "c"},
     )
     assert result["status"] == "complete"
     assert result["question"] is None

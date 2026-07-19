@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
 from app.api.health import router as health_router
+from app.api.v1.triage import router as triage_router
 from app.config import load_settings
 from app.domain.exceptions import CareFlowException
 from app.infrastructure.database import dispose_engine
@@ -37,6 +38,15 @@ async def handle_domain_exception(request: Request, exc: Exception) -> JSONRespo
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Application startup and shutdown lifecycle."""
     logger.info("Application starting...")
+    # Hackathon: ensure schema exists (SQLite dev path). PostgreSQL uses Alembic.
+    settings = load_settings()
+    if settings.database.database_url.startswith("sqlite"):
+        from app.infrastructure.database import get_engine
+        from app.infrastructure.models import Base
+
+        engine = get_engine(settings.database)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
     yield
     logger.info("Application shutting down...")
     await dispose_engine()
@@ -68,6 +78,7 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(health_router)
+    app.include_router(triage_router)
     return app
 
 

@@ -32,7 +32,7 @@ class LLMConfig(BaseSettings):
 class DatabaseConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CAREFLOW_", env_file=".env", extra="ignore")
 
-    database_url: str = "sqlite:///:memory:"
+    database_url: str = "sqlite:///./careflow_dev.db"
 
 
 class Settings(BaseSettings):

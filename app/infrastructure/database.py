@@ -24,6 +24,8 @@ def get_engine(config: DatabaseConfig) -> AsyncEngine:
         database_url = config.database_url
         if database_url.startswith("postgresql://"):
             database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif database_url.startswith("sqlite:///"):
+            database_url = database_url.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
 
         _engine = create_async_engine(
             database_url,
@@ -70,3 +72,10 @@ async def dispose_engine() -> None:
     if _engine is not None:
         await _engine.dispose()
         _engine = None
+
+
+def reset_state() -> None:
+    """Testing hook: clear the lazy engine/factory singletons."""
+    global _engine, _session_factory
+    _engine = None
+    _session_factory = None
