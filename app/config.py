@@ -17,7 +17,12 @@ class AppConfig(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        origins = ["http://localhost:5173", "http://localhost:3000"]
+        origins = [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://localhost:8080",
+            "http://localhost:8081",
+        ]
         if self.frontend_origin:
             origins.append(self.frontend_origin)
         return origins
